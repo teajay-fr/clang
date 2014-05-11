@@ -107,6 +107,10 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     TyposCorrected(0), AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
     VarDataSharingAttributesStack(nullptr), CurScope(nullptr),
     Ident_super(nullptr), Ident___float128(nullptr)
+// BEGIN TEMPLIGHT
+    , TemplightFlag(false), TemplightMemoryFlag(false),
+    TraceEntryCount(0), TraceEntries(0)
+// END TEMPLIGHT
 {
   TUScope = nullptr;
 
@@ -278,6 +282,10 @@ Sema::~Sema() {
   // If Sema's ExternalSource is the multiplexer - we own it.
   if (isMultiplexExternalSource)
     delete ExternalSource;
+
+  // BEGIN TEMPLIGHT
+  delete [] TraceEntries;
+  // END TEMPLIGHT
 
   threadSafety::threadSafetyCleanup(ThreadSafetyDeclCache);
 

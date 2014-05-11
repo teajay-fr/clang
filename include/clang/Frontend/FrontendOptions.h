@@ -159,6 +159,19 @@ public:
   unsigned IncludeTimestamps : 1;          ///< Whether timestamps should be
                                            ///< written to the produced PCH file.
 
+  // BEGIN TEMPLIGHT
+  unsigned Templight : 1;                  ///< For Tracing template
+                                           /// instantiations
+  unsigned TemplightStdout : 1;            ///< Tracing template instantiations
+                                           /// to stdout
+  unsigned TemplightMemory : 1;            ///< For tracing memory usage
+                                           /// during template instantiations
+                                           /// This indicates Templight
+  unsigned TemplightSafeMode : 1;          ///< For flushing the Templight
+                                           /// trace immediately instead of
+                                           /// store it in a buffer
+  // END TEMPLIGHT
+
   CodeCompleteOptions CodeCompleteOpts;
 
   enum {
@@ -217,6 +230,17 @@ public:
 
   /// The output file, if any.
   std::string OutputFile;
+
+  // BEGIN TEMPLIGHT
+  /// Output file fo Templight, if any.
+  std::string TemplightOutputFile;
+
+  /// Format of Templight output (yaml/xml/text)
+  std::string TemplightFormat;
+
+  /// Capacity of trace file
+  unsigned TraceCapacity;
+  // END TEMPLIGHT
 
   /// If given, the new suffix for fix-it rewritten files.
   std::string FixItSuffix;

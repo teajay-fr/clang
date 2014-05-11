@@ -6983,7 +6983,11 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
                               /*Recover*/TreatAsComplete);
       return !TreatAsComplete;
     }
-
+// BEGIN TEMPLIGHT
+    else if (Def) {
+      traceMemoization(Def, Loc);
+    }
+    // END TEMPLIGHT
     return false;
   }
 

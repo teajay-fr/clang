@@ -1248,6 +1248,26 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.ModulesEmbedFiles = Args.getAllArgValues(OPT_fmodules_embed_file_EQ);
   Opts.ModulesEmbedAllFiles = Args.hasArg(OPT_fmodules_embed_all_files);
   Opts.IncludeTimestamps = !Args.hasArg(OPT_fno_pch_timestamp);
+  // BEGIN TEMPLIGHT
+  Opts.Templight = Args.hasArg(OPT_templight);
+  Opts.TemplightStdout = Args.hasArg(OPT_templight_stdout);
+  Opts.TemplightMemory = Args.hasArg(OPT_templight_memory);
+  Opts.TemplightSafeMode = Args.hasArg(OPT_templight_safe_mode);
+
+  if (const Arg *A = Args.getLastArg(OPT_templight_output)) {
+    Opts.TemplightOutputFile = A->getValue();
+  }
+
+  if (const Arg *A = Args.getLastArg(OPT_templight_format)) {
+    Opts.TemplightFormat = A->getValue();
+  }
+
+  if (const Arg *A = Args.getLastArg(OPT_trace_capacity)) {
+    Opts.TraceCapacity = atoi(A->getValue());
+  } else {
+    Opts.TraceCapacity = 5E5;
+  }
+  // END TEMPLIGHT 
 
   Opts.CodeCompleteOpts.IncludeMacros
     = Args.hasArg(OPT_code_completion_macros);
