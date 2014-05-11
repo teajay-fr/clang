@@ -31,6 +31,21 @@ using namespace clang;
 
 namespace {
 
+// BEGIN TEMPLIGHT
+class TemplightDriver {
+public:
+  TemplightDriver(Sema& S) : TheSema(S) {
+    TheSema.startTemplight();
+  }
+
+  ~TemplightDriver() {
+    TheSema.finishTemplight();
+  }
+
+  Sema& TheSema;
+};
+// END TEMPLIGHT
+
 /// If a crash happens while the parser is active, an entry is printed for it.
 class PrettyStackTraceParserEntry : public llvm::PrettyStackTraceEntry {
   const Parser &P;
@@ -98,6 +113,9 @@ void clang::ParseAST(Preprocessor &PP, ASTConsumer *Consumer,
 }
 
 void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
+  // BEGIN TEMPLIGHT
+  TemplightDriver TraceFlusher(S);
+  // END TEMPLIGHT
   // Collect global stats on Decls/Stmts (until we have a module streamer).
   if (PrintStats) {
     Decl::EnableStatistics();

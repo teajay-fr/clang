@@ -432,6 +432,32 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
                                   CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
                          TUKind, CompletionConsumer));
+  // BEGIN TEMPLIGHT
+  bool Templight = getInvocation().getFrontendOpts().Templight;
+  bool TemplightStdout = getInvocation().getFrontendOpts().TemplightStdout;
+  bool TemplightMemory = getInvocation().getFrontendOpts().TemplightMemory;
+  bool TemplightSafe = getInvocation().getFrontendOpts().TemplightSafeMode;
+  std::string TemplightOutput =
+    getInvocation().getFrontendOpts().TemplightOutputFile;
+
+  unsigned TraceCapacity = getInvocation().getFrontendOpts().TraceCapacity;
+
+  std::string TemplightFormat =
+    getInvocation().getFrontendOpts().TemplightFormat;
+  
+  if (!TemplightFormat.empty()) {
+    TheSema->setTemplightFormat(TemplightFormat);
+  }
+
+  TheSema->setTemplightFlag(Templight);
+  if (!TemplightOutput.empty())
+    TheSema->setTemplightOutputFile(TemplightOutput);
+  TheSema->setTemplightMemoryFlag(TemplightMemory);
+  TheSema->setTemplightSafeModeFlag(TemplightSafe);
+  TheSema->setTraceCapacity(TraceCapacity);
+
+  if (TemplightStdout) TheSema->templightTraceToStdOut();
+  // END TEMPLIGHT
 }
 
 // Output Files

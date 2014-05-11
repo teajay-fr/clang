@@ -5170,7 +5170,11 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
       // Try to recover by implicitly importing this module.
       createImplicitModuleImportForErrorRecovery(Loc, Owner);
     }
-
+    // BEGIN TEMPLIGHT
+    else if (Def) {
+      traceMemoization(Def, Loc);
+    }
+    // END TEMPLIGHT
     // We lock in the inheritance model once somebody has asked us to ensure
     // that a pointer-to-member type is complete.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {

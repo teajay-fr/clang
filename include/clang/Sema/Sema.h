@@ -59,6 +59,11 @@ namespace llvm {
   template <typename ValueT> struct DenseMapInfo;
   template <typename ValueT, typename ValueInfoT> class DenseSet;
   class SmallBitVector;
+   // BEGIN TEMPLIGHT
+  namespace yaml {
+    class Output;
+  }
+  // END TEMPLIGHT
 }
 
 namespace clang {
@@ -8280,6 +8285,156 @@ public:
       DC = CatD->getClassInterface();
     return DC;
   }
+
+  // BEGIN TEMPLIGHT
+public:
+  /// \brief Since we profile template instantiations it is more
+  /// efficient to store this struct in an internal buffer during template
+  /// instantiating than
+  struct RawTraceEntry {
+    bool IsTemplateBegin;
+    ActiveTemplateInstantiation::InstantiationKind InstantiationKind;
+    uintptr_t Entity;
+    SourceLocation PointOfInstantiation;
+    double TimeStamp;
+    size_t MemoryUsage;
+  };
+
+  struct PrintableTraceEntry {
+    bool IsTemplateBegin;
+    std::string InstantiationKind;
+    std::string Name;
+    std::string FileName;
+    int Line;
+    int Column;
+    double TimeStamp;
+    size_t MemoryUsage;
+  };
+
+  class TracePrinter {
+  public:
+    virtual void startTrace(raw_ostream* os) = 0;
+    virtual void endTrace(raw_ostream* os) = 0;
+    virtual void printEntry(raw_ostream* os,
+      const PrintableTraceEntry& Entry) = 0;
+
+    virtual std::string getFormatName() = 0;
+
+    virtual ~TracePrinter() {}
+  };
+
+  class YamlPrinter : public TracePrinter {
+  public:
+    void startTrace(raw_ostream* os);
+    void endTrace(raw_ostream* os);
+    void printEntry(raw_ostream* os, const PrintableTraceEntry& Entry);
+
+    std::string getFormatName() { return "yaml"; }
+
+  private:
+    llvm::OwningPtr<llvm::yaml::Output> Output;
+  };
+
+  class XmlPrinter : public TracePrinter {
+  public:
+    void startTrace(raw_ostream* os);
+    void endTrace(raw_ostream* os);
+    void printEntry(raw_ostream* os, const PrintableTraceEntry& Entry);
+
+    std::string getFormatName() { return "xml"; }
+  };
+
+  class TextPrinter : public TracePrinter {
+  public:
+    void startTrace(raw_ostream* os);
+    void endTrace(raw_ostream* os);
+    void printEntry(raw_ostream* os, const PrintableTraceEntry& Entry);
+
+    std::string getFormatName() { return "text"; }
+  };
+
+private:
+  PrintableTraceEntry rawToPrintable(const RawTraceEntry& Entry);
+
+  bool TemplightFlag;
+  bool TemplightMemoryFlag;
+  bool TemplightSafeModeFlag;
+
+  unsigned TraceEntryCount;
+
+  unsigned TraceCapacity;
+  RawTraceEntry* TraceEntries;
+  RawTraceEntry LastBeginEntry;
+
+  raw_ostream* TraceOS;
+  llvm::OwningPtr<TracePrinter> TemplateTracePrinter;
+
+public:
+  void setTemplightFlag(bool B) {
+    TemplightFlag = B;
+  }
+
+  void setTemplightMemoryFlag(bool B) {
+    TemplightMemoryFlag = B;
+    TemplightFlag |= B;
+  }
+
+  void setTemplightSafeModeFlag(bool B) {
+    TemplightSafeModeFlag = B;
+    TemplightFlag |= B;
+  }
+
+  unsigned getTraceCapacity() const {
+    return TraceCapacity;
+  }
+
+  void setTraceCapacity(unsigned Capacity) {
+    TraceCapacity = Capacity;
+  }
+
+  void templightTraceToStdOut();
+
+
+  void allocateTraceEntriesArray() {
+    if (TraceEntries != 0) {
+      return;
+    }
+
+    TraceEntries = new RawTraceEntry[TraceCapacity];
+  }
+
+  void setTemplightOutputFile(const std::string& FileName);
+
+  /// \brief Sets the format type of the template trace file.
+  /// The argument can be xml/yaml/text
+  void setTemplightOutputFormat(const std::string& Format);
+
+  bool getTemplightFlag() const {
+    return TemplightFlag;
+  }
+
+  bool getTemplightMemoryFlag() const {
+    return TemplightMemoryFlag;
+  }
+
+  bool getTemplightSafeModeFlag() const {
+    return TemplightSafeModeFlag;
+  }
+
+  void setTemplightFormat(const std::string& Format);
+
+  void traceTemplateBegin(unsigned int InstantiationKind, Decl* Entity,
+    SourceLocation PointOfInstantiation);
+  void traceTemplateEnd(unsigned int InstantiationKind);
+  void traceMemoization(NamedDecl* Memoizied, SourceLocation Loc);
+
+
+  void startTemplight();
+  void finishTemplight();
+
+private:
+  void flushRawTraceEntry(const RawTraceEntry& Entry);
+  // END TEMPLIGHT
 };
 
 /// \brief RAII object that enters a new expression evaluation context.

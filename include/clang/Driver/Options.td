@@ -153,6 +153,33 @@ def arcmt_migrate_emit_arc_errors : Flag<["-"], "arcmt-migrate-emit-errors">,
   HelpText<"Emit ARC errors even if the migrator can fix them">,
   Flags<[CC1Option]>;
 
+// BEGIN TEMPLIGHT
+//===----------------------------------------------------------------------===//
+// Templight Options
+//===----------------------------------------------------------------------===//
+  
+def templight : Flag<["-"], "templight">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"For tracing template instantiations">; 
+  
+def templight_stdout : Flag<["-"], "templight-stdout">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Tracing template instantiations to standard output">;
+  
+def templight_memory : Flag<["-"], "templight-memory">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"For tracing memory usage during template instantiations">;
+  
+def templight_safe_mode : Flag<["-"], "templight-safe-mode">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"For flushing Templight trace immediately instead of store the trace in a buffer">;
+  
+def templight_output : JoinedOrSeparate<["-"], "templight-output">, Flags<[DriverOption, RenderAsInput, CC1Option]>,
+  HelpText<"Write Templight output to <file>">, MetaVarName<"<file>">;
+  
+def templight_format : JoinedOrSeparate<["-"], "templight-format">, Flags<[DriverOption, RenderAsInput, CC1Option]>,
+  HelpText<"Format of Templight output (yaml/xml/text, default is yaml)">, MetaVarName<"<format>">;
+  
+def trace_capacity : JoinedOrSeparate<["-"], "trace-capacity">, Flags<[DriverOption, RenderAsInput, CC1Option]>,
+  HelpText<"Capacity of internal template trace buffer">, MetaVarName<"<capacity>">;
+// END TEMPLIGHT
+
 def _migrate : Flag<["--"], "migrate">, Flags<[DriverOption]>,
   HelpText<"Run the migrator">;
 def ccc_objcmt_migrate : Separate<["-"], "ccc-objcmt-migrate">,

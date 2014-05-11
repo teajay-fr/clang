@@ -3210,8 +3210,18 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
       assert(FunTmpl->getTemplatedDecl() == Tmpl &&
              "Deduction from the wrong function template?");
       (void) FunTmpl;
+      // BEGIN TEMPLIGHT
+      if (SemaRef.getTemplightFlag())
+        SemaRef.traceTemplateEnd(ActiveInst.Kind);
+      // END TEMPLIGHT
       ActiveInst.Kind = ActiveInstType::TemplateInstantiation;
       ActiveInst.Entity = New;
+      // BEGIN TEMPLIGHT
+      if (SemaRef.getTemplightFlag()) {
+        SemaRef.traceTemplateBegin(ActiveInst.Kind, ActiveInst.Entity,
+            ActiveInst.PointOfInstantiation);
+      }
+      // END TEMPLIGHT
     }
   }
 

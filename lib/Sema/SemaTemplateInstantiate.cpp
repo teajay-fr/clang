@@ -24,12 +24,470 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 
+// BEGIN TEMPLIGHT
+#include "llvm/Support/Format.h"
+#include <llvm/Object/YAML.h>
+#include "llvm/Support/Timer.h"
+#include "llvm/Support/Process.h"
+#include <string>
+#include <vector>
+#include "clang/Basic/FileManager.h"
+// END TEMPLIGHT
+
 using namespace clang;
 using namespace sema;
 
 //===----------------------------------------------------------------------===/
 // Template Instantiation Support
 //===----------------------------------------------------------------------===/
+
+// BEGIN TEMPLIGHT
+namespace llvm {
+namespace yaml {
+
+template <>
+struct ScalarEnumerationTraits<
+    clang::Sema::ActiveTemplateInstantiation::InstantiationKind> {
+  static void enumeration(IO &io,
+    clang::Sema::ActiveTemplateInstantiation::InstantiationKind &value) {
+    using namespace clang;
+    io.enumCase(value, "TemplateInstantiation",
+      Sema::ActiveTemplateInstantiation::TemplateInstantiation);
+    io.enumCase(value, "DefaultTemplateArgumentInstantiation",
+      Sema::ActiveTemplateInstantiation::DefaultTemplateArgumentInstantiation);
+    io.enumCase(value, "DefaultFunctionArgumentInstantiation",
+      Sema::ActiveTemplateInstantiation::DefaultFunctionArgumentInstantiation);
+    io.enumCase(value, "ExplicitTemplateArgumentSubstitution",
+      Sema::ActiveTemplateInstantiation::ExplicitTemplateArgumentSubstitution);
+    io.enumCase(value, "DeducedTemplateArgumentSubstitution",
+      Sema::ActiveTemplateInstantiation::DeducedTemplateArgumentSubstitution);
+    io.enumCase(value, "PriorTemplateArgumentSubstitution",
+      Sema::ActiveTemplateInstantiation::PriorTemplateArgumentSubstitution);
+    io.enumCase(value, "DefaultTemplateArgumentChecking",
+      Sema::ActiveTemplateInstantiation::DefaultTemplateArgumentChecking);
+    io.enumCase(value, "ExceptionSpecInstantiation",
+      Sema::ActiveTemplateInstantiation::ExceptionSpecInstantiation);
+    io.enumCase(value, "Memoization",
+      Sema::ActiveTemplateInstantiation::Memoization);
+  }
+};
+
+template <>
+struct MappingTraits<clang::Sema::PrintableTraceEntry> {
+  static void mapping(IO &io, clang::Sema::PrintableTraceEntry &Entry) {
+    io.mapRequired("IsTemplateBegin", Entry.IsTemplateBegin);
+    io.mapRequired("Kind", Entry.InstantiationKind);
+    io.mapOptional("Name", Entry.Name);
+    io.mapOptional("FileName", Entry.FileName);
+    io.mapOptional("Line", Entry.Line);
+    io.mapOptional("Column", Entry.Column);
+    io.mapRequired("TimeStamp", Entry.TimeStamp);
+    io.mapOptional("MemoryUsage", Entry.MemoryUsage);
+  }
+};
+
+template<typename T>
+struct SequenceTraits<std::vector<T> > {
+   static size_t size(IO &io, std::vector<T> &seq) {
+     return seq.size();
+   }
+
+   static typename std::vector<T>::value_type& element(
+     IO &io, std::vector<T> &seq, size_t index) {
+     return seq[index];
+   }
+  //
+  // The following is option and will cause generated YAML to use
+  // a flow sequence (e.g. [a,b,c]).
+  static const bool flow = true;
+};
+
+} // namespace yaml
+} // namespace llvm
+
+void Sema::YamlPrinter::startTrace(raw_ostream* os) {
+  Output.reset(new llvm::yaml::Output(*os));
+  Output->beginDocuments();
+  Output->beginFlowSequence();
+}
+
+void Sema::YamlPrinter::endTrace(raw_ostream*) {
+  Output->endFlowSequence();
+  Output->endDocuments();
+}
+
+void Sema::YamlPrinter::printEntry(raw_ostream*,
+  const PrintableTraceEntry& Entry) {
+  void *SaveInfo;
+  if ( Output->preflightFlowElement(1, SaveInfo) ) {
+    llvm::yaml::yamlize(*Output, const_cast<PrintableTraceEntry&>(Entry), true);
+    Output->postflightFlowElement(SaveInfo);
+  }
+}
+
+void Sema::TextPrinter::startTrace(raw_ostream*) {
+}
+
+void Sema::TextPrinter::endTrace(raw_ostream*) {
+}
+void Sema::TextPrinter::printEntry(raw_ostream* os,
+  const PrintableTraceEntry& Entry) {
+  if (Entry.IsTemplateBegin) {
+    *os
+      << llvm::format(
+        "TemplateBegin\n"
+        "  Kind = %s\n"
+        "  Name = %s\n"
+        "  PointOfInstantiation = %s|%d|%d\n",
+        Entry.InstantiationKind.c_str(), Entry.Name.c_str(),
+        Entry.FileName.c_str(), Entry.Line, Entry.Column);
+
+    *os << llvm::format(
+      "  TimeStamp = %f\n"
+      "  MemoryUsage = %d\n"
+      , Entry.TimeStamp, Entry.MemoryUsage);
+  } else {
+    *os
+      << llvm::format(
+        "TemplateEnd\n"
+        "  Kind = %s\n"
+        "  TimeStamp = %f\n"
+        "  MemoryUsage = %d\n"
+        , Entry.InstantiationKind.c_str(),
+        Entry.TimeStamp, Entry.MemoryUsage);
+  }
+}
+
+namespace { // unnamed namespace
+
+const char* InstantiationKindStrings[] = { "TemplateInstantiation",
+  "DefaultTemplateArgumentInstantiation",
+  "DefaultFunctionArgumentInstantiation",
+  "ExplicitTemplateArgumentSubstitution",
+  "DeducedTemplateArgumentSubstitution", "PriorTemplateArgumentSubstitution",
+  "DefaultTemplateArgumentChecking", "ExceptionSpecInstantiation",
+  "Memoization" };
+
+void reportTraceCapacityExceeded(unsigned int ActualCapacity) {
+  static bool AlreadyReported = false;
+
+  if (!AlreadyReported) {
+    llvm::errs() <<
+      llvm::format("Template instantiations limit of Templight exceeded, "
+      "please specify a greater value.\nCurrent limit: %d\n", ActualCapacity);
+  }
+
+  AlreadyReported = true;
+}
+
+static std::string escapeXml(const std::string& Input) {
+  std::string Result;
+  Result.reserve(64);
+
+  unsigned i, pos = 0;
+  for (i = 0; i < Input.length(); ++i) {
+    if (Input[i] == '<' || Input[i] == '>' || Input[i] == '"'
+      || Input[i] == '\'' || Input[i] == '&') {
+      Result.insert(Result.length(), Input, pos, i - pos);
+      pos = i + 1;
+      switch (Input[i]) {
+      case '<':
+        Result += "&lt;";
+        break;
+      case '>':
+        Result += "&gt;";
+        break;
+      case '\'':
+        Result += "&apos;";
+        break;
+      case '"':
+        Result += "&quot;";
+        break;
+      case '&':
+        Result += "&amp;";
+        break;
+      default:
+        break;
+      }
+    }
+  }
+  Result.insert(Result.length(), Input, pos, i - pos);
+  return Result;
+}
+
+} // unnamed namespace
+
+
+void Sema::XmlPrinter::startTrace(raw_ostream* os) {
+  *os <<
+    "<?xml version=\"1.0\" standalone=\"yes\"?>\n"
+    "<Trace>\n";
+}
+
+void Sema::XmlPrinter::endTrace(raw_ostream* os) {
+  *os << "</Trace>\n";
+}
+
+#if 1
+void Sema::XmlPrinter::printEntry(
+  raw_ostream* os, const Sema::PrintableTraceEntry& Entry) {
+  static int templateid = 0;
+  if (Entry.IsTemplateBegin) {
+    std::string EscapedName = escapeXml(Entry.Name);
+    *os << llvm::format("<Template id=\"%i\">\n",templateid);
+    *os
+      << llvm::format(
+        "    <Kind>%s</Kind>\n"
+        "    <Context context = \"%s\"/>\n"
+        "    <PointOfInstantiation>%s|%d|%d</PointOfInstantiation>\n",
+        Entry.InstantiationKind.c_str(), EscapedName.c_str(),
+        Entry.FileName.c_str(), Entry.Line, Entry.Column);
+
+    *os << llvm::format("    <TimeStampStart time = \"%f\"/>\n"
+      "    <MemoryUsageStart bytes = \"%d\"/>\n"
+      , Entry.TimeStamp, Entry.MemoryUsage);
+    templateid++;
+  } else {
+    *os
+      << llvm::format(
+        "    <Kind>%s</Kind>\n"
+        "    <TimeStampEnd time = \"%f\"/>\n"
+        "    <MemoryUsageEnd bytes = \"%d\"/>\n"
+        "</Template>\n", Entry.InstantiationKind.c_str(),
+        Entry.TimeStamp, Entry.MemoryUsage);
+  }
+}
+#else
+void Sema::XmlPrinter::printEntry(
+  raw_ostream* os, const Sema::PrintableTraceEntry& Entry) {
+  if (Entry.IsTemplateBegin) {
+    std::string EscapedName = escapeXml(Entry.Name);
+    *os
+      << llvm::format("<TemplateBegin>\n"
+        "    <Kind>%s</Kind>\n"
+        "    <Context context = \"%s\"/>\n"
+        "    <PointOfInstantiation>%s|%d|%d</PointOfInstantiation>\n",
+        Entry.InstantiationKind.c_str(), EscapedName.c_str(),
+        Entry.FileName.c_str(), Entry.Line, Entry.Column);
+
+    *os << llvm::format("    <TimeStamp time = \"%f\"/>\n"
+      "    <MemoryUsage bytes = \"%d\"/>\n"
+      "</TemplateBegin>\n", Entry.TimeStamp, Entry.MemoryUsage);
+  } else {
+    *os
+      << llvm::format("<TemplateEnd>\n"
+        "    <Kind>%s</Kind>\n"
+        "    <TimeStamp time = \"%f\"/>\n"
+        "    <MemoryUsage bytes = \"%d\"/>\n"
+        "</TemplateEnd>\n", Entry.InstantiationKind.c_str(),
+        Entry.TimeStamp, Entry.MemoryUsage);
+  }
+}
+#endif
+
+
+void Sema::setTemplightFormat(const std::string& Format) {
+  if (Format == "yaml") {
+    TemplateTracePrinter.reset(new YamlPrinter());
+    return;
+  }
+  else if (Format == "xml") {
+    TemplateTracePrinter.reset(new XmlPrinter());
+    return;
+  }
+  else if (Format == "text") {
+    TemplateTracePrinter.reset(new TextPrinter());
+    return;
+  }
+  else {
+    llvm::errs() << "Error: Unrecoginized template trace format:" << Format;
+  }
+}
+
+Sema::PrintableTraceEntry
+Sema::rawToPrintable(const Sema::RawTraceEntry& Entry) {
+  PrintableTraceEntry Ret;
+
+  Ret.IsTemplateBegin = Entry.IsTemplateBegin;
+  Ret.InstantiationKind = InstantiationKindStrings[Entry.InstantiationKind];
+
+  if (Entry.IsTemplateBegin) {
+    Decl *Template = reinterpret_cast<Decl*>(Entry.Entity);
+    NamedDecl *NamedTemplate = dyn_cast<NamedDecl>(Template);
+
+    if (NamedTemplate) {
+      llvm::raw_string_ostream OS(Ret.Name);
+      NamedTemplate->getNameForDiagnostic(OS, getLangOpts(), true);
+    }
+
+    PresumedLoc Loc = getSourceManager().getPresumedLoc(
+      Entry.PointOfInstantiation);
+
+    Ret.FileName = Loc.getFilename();
+    Ret.Line = Loc.getLine();
+    Ret.Column = Loc.getColumn();
+  }
+
+  Ret.TimeStamp = Entry.TimeStamp;
+  Ret.MemoryUsage = Entry.MemoryUsage;
+
+  return Ret;
+}
+
+void Sema::startTemplight() {
+  if (!getTemplightFlag()) {
+    return;
+  }
+
+  if (!getTemplightSafeModeFlag()) {
+    allocateTraceEntriesArray();
+  }
+
+  if (!TemplateTracePrinter) {
+    TemplateTracePrinter.reset(new YamlPrinter());
+  }
+
+  FileID fileID = getSourceManager().getMainFileID();
+
+  if (!TraceOS) {
+    std::string postfix = getTemplightMemoryFlag() ? ".memory.trace." : ".trace.";
+    postfix += TemplateTracePrinter->getFormatName();
+
+    std::string FileName =
+      getSourceManager().getFileEntryForID(fileID)->getName() + postfix;
+
+    std::string error;
+    TraceOS = new llvm::raw_fd_ostream(FileName.c_str(), error,llvm::sys::fs::F_None );
+
+    if (!error.empty()) {
+      llvm::errs() <<
+        "Can not open file to write trace of template instantiations: "
+        << FileName << " Error: " << error;
+      setTemplightFlag(false);
+      return;
+    }
+  }
+
+  TemplateTracePrinter->startTrace(TraceOS);
+}
+
+void Sema::finishTemplight() {
+  if (!getTemplightFlag()) {
+    return;
+  }
+
+  // In this case we collected the entries in a buffer
+  // and we have to output them now
+  if (!getTemplightSafeModeFlag()) {
+    for (unsigned i = 0; i < TraceEntryCount; ++i) {
+      TemplateTracePrinter->printEntry(TraceOS,
+        rawToPrintable(TraceEntries[i]));
+    }
+  }
+
+  TemplateTracePrinter->endTrace(TraceOS);
+
+  TraceOS->flush();
+  if (TraceOS != &llvm::outs()) {
+    delete TraceOS;
+  }
+}
+
+void Sema::templightTraceToStdOut() {
+  TraceOS = &llvm::outs();
+  TemplightFlag = true;
+}
+
+void Sema::setTemplightOutputFile(const std::string& FileName) {
+  std::string error;
+  TraceOS = new llvm::raw_fd_ostream(FileName.c_str(), error,llvm::sys::fs::F_None);
+
+  if (!error.empty()) {
+    llvm::errs() <<
+      "Can not open file to write trace of template instantiations: "
+      << FileName << " Error: " << error;
+    TraceOS = 0;
+    return;
+  }
+
+  TemplightFlag = true;
+}
+
+void Sema::traceTemplateBegin(unsigned int InstantiationKind, Decl* Entity,
+  SourceLocation PointOfInstantiation) {
+  if (TraceEntryCount >= TraceCapacity) {
+    reportTraceCapacityExceeded(TraceCapacity);
+    return;
+  }
+
+  RawTraceEntry Entry;
+
+  llvm::TimeRecord timeRecord = llvm::TimeRecord::getCurrentTime();
+
+  Entry.IsTemplateBegin = true;
+  Entry.InstantiationKind =
+    (ActiveTemplateInstantiation::InstantiationKind)InstantiationKind;
+  Entry.Entity = (uintptr_t)Entity;
+  Entry.PointOfInstantiation = PointOfInstantiation;
+  Entry.TimeStamp = timeRecord.getWallTime();
+  Entry.MemoryUsage =
+    (getTemplightMemoryFlag()) ? llvm::sys::Process::GetMallocUsage() : 0;
+
+  if (getTemplightSafeModeFlag()) {
+    TemplateTracePrinter->printEntry(TraceOS, rawToPrintable(Entry));
+    TraceOS->flush();
+  } else {
+    TraceEntries[TraceEntryCount++] = Entry;
+  }
+
+  LastBeginEntry = Entry;
+}
+
+void Sema::traceTemplateEnd(unsigned int InstantiationKind) {
+  if (TraceEntryCount >= TraceCapacity) {
+    reportTraceCapacityExceeded(TraceCapacity);
+    return;
+  }
+
+  RawTraceEntry Entry;
+
+  llvm::TimeRecord timeRecord = llvm::TimeRecord::getCurrentTime();
+
+  Entry.IsTemplateBegin = false;
+  Entry.InstantiationKind =
+    (ActiveTemplateInstantiation::InstantiationKind)InstantiationKind;
+  Entry.TimeStamp = timeRecord.getWallTime();
+  Entry.MemoryUsage =
+    (getTemplightMemoryFlag()) ? llvm::sys::Process::GetMallocUsage() : 0;
+
+  if (getTemplightSafeModeFlag()) {
+    TemplateTracePrinter->printEntry(TraceOS, rawToPrintable(Entry));
+    TraceOS->flush();
+  } else {
+    TraceEntries[TraceEntryCount++] = Entry;
+  }
+}
+
+void Sema::traceMemoization(NamedDecl* Memoized, SourceLocation Loc)
+{
+  if (TraceEntryCount < 2) {
+    return;
+  }
+
+  if (LastBeginEntry.InstantiationKind
+    == ActiveTemplateInstantiation::Memoization
+    && LastBeginEntry.IsTemplateBegin
+    && LastBeginEntry.Entity == (uintptr_t)Memoized) {
+    return;
+  }
+
+  traceTemplateBegin(ActiveTemplateInstantiation::Memoization,
+    Memoized, Loc);
+
+  traceTemplateEnd(ActiveTemplateInstantiation::Memoization);
+}
+
+// END TEMPLIGHT
 
 /// \brief Retrieve the template argument list(s) that should be used to
 /// instantiate the definition of the given declaration.
@@ -195,6 +653,10 @@ bool Sema::ActiveTemplateInstantiation::isInstantiationRecord() const {
 
   case DefaultTemplateArgumentChecking:
     return false;
+  // BEGIN TEMPLIGHT
+  case Memoization:
+    break;
+  // END TEMPLIGHT
   }
 
   llvm_unreachable("Invalid InstantiationKind!");
@@ -220,6 +682,10 @@ void Sema::InstantiatingTemplate::Initialize(
     Inst.InstantiationRange = InstantiationRange;
     SemaRef.InNonInstantiationSFINAEContext = false;
     SemaRef.ActiveTemplateInstantiations.push_back(Inst);
+ // BEGIN TEMPLIGHT
+    if (SemaRef.getTemplightFlag())
+      SemaRef.traceTemplateBegin(Inst.Kind, Inst.Entity, PointOfInstantiation);
+    // END TEMPLIGHT
     if (!Inst.isInstantiationRecord())
       ++SemaRef.NonInstantiationEntries;
   }
@@ -364,6 +830,13 @@ void Sema::InstantiatingTemplate::Clear() {
       SemaRef.ActiveTemplateInstantiationLookupModules.pop_back();
     }
 
+    // BEGIN TEMPLIGHT
+    if (SemaRef.getTemplightFlag()) {
+      ActiveTemplateInstantiation Last =
+        SemaRef.ActiveTemplateInstantiations.back();
+      SemaRef.traceTemplateEnd(Last.Kind);
+    }
+    // END TEMPLIGHT
     SemaRef.ActiveTemplateInstantiations.pop_back();
     Invalid = true;
   }
@@ -575,6 +1048,10 @@ void Sema::PrintInstantiationStack() {
         << cast<FunctionDecl>(Active->Entity)
         << Active->InstantiationRange;
       break;
+    // BEGIN TEMPLIGHT
+    case ActiveTemplateInstantiation::Memoization:
+      break;
+    // END TEMPLIGHT
     }
   }
 }
@@ -615,6 +1092,10 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
       // or deduced template arguments, so SFINAE applies.
       assert(Active->DeductionInfo && "Missing deduction info pointer");
       return Active->DeductionInfo;
+    // BEGIN TEMPLIGHT
+    case ActiveTemplateInstantiation::Memoization:
+      break;
+    // END TEMPLIGHT
     }
   }
 

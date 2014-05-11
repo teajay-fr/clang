@@ -3168,6 +3168,23 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  // BEGIN TEMPLIGHT
+  if (Arg *A = Args.getLastArg(options::OPT_trace_capacity)) {
+    CmdArgs.push_back("-trace-capacity");
+    CmdArgs.push_back(A->getValue());
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_templight_output)) {
+    CmdArgs.push_back("-templight-output");
+    CmdArgs.push_back(A->getValue());
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_templight_format)) {
+      CmdArgs.push_back("-templight-format");
+      CmdArgs.push_back(A->getValue());
+  }
+  // END TEMPLIGHT
+
   if (Arg *A = Args.getLastArg(options::OPT_fconstexpr_depth_EQ)) {
     CmdArgs.push_back("-fconstexpr-depth");
     CmdArgs.push_back(A->getValue());
@@ -3315,6 +3332,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_parseable_fixits);
   Args.AddLastArg(CmdArgs, options::OPT_ftime_report);
   Args.AddLastArg(CmdArgs, options::OPT_ftrapv);
+  // BEGIN TEMPLIGHT
+  Args.AddLastArg(CmdArgs, options::OPT_templight);
+  Args.AddLastArg(CmdArgs, options::OPT_templight_stdout);
+  Args.AddLastArg(CmdArgs, options::OPT_templight_memory);
+  Args.AddLastArg(CmdArgs, options::OPT_templight_safe_mode);
+  // END TEMPLIGHT
 
   if (Arg *A = Args.getLastArg(options::OPT_ftrapv_handler_EQ)) {
     CmdArgs.push_back("-ftrapv-handler");
