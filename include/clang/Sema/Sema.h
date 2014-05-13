@@ -48,6 +48,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/ADT/OwningPtr.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include <deque>
 #include <memory>
@@ -6131,7 +6132,15 @@ public:
 
       /// We are instantiating the exception specification for a function
       /// template which was deferred until it was needed.
-      ExceptionSpecInstantiation
+      ExceptionSpecInstantiation,
+
+      // BEGIN TEMPLIGHT
+      /// Added for Template debugging (TEMPLIGHT)
+      /// We are _not_ instantiating a template because it is already
+      /// instantiated.
+      Memoization
+      // END TEMPLIGHT
+
     } Kind;
 
     /// \brief The point of instantiation within the source code.
@@ -6180,6 +6189,7 @@ public:
       switch (X.Kind) {
       case TemplateInstantiation:
       case ExceptionSpecInstantiation:
+      case Memoization:
         return true;
 
       case PriorTemplateArgumentSubstitution:
