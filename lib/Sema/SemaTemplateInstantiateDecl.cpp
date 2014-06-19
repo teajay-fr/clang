@@ -3456,14 +3456,13 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
       (void) FunTmpl;
       // BEGIN TEMPLIGHT
       if (SemaRef.getTemplightFlag())
-        SemaRef.traceTemplateEnd(ActiveInst.Kind);
+        SemaRef.traceTemplateEnd();
       // END TEMPLIGHT
       ActiveInst.Kind = ActiveInstType::TemplateInstantiation;
       ActiveInst.Entity = New;
       // BEGIN TEMPLIGHT
       if (SemaRef.getTemplightFlag()) {
-        SemaRef.traceTemplateBegin(ActiveInst.Kind, ActiveInst.Entity,
-            ActiveInst.PointOfInstantiation);
+        SemaRef.traceTemplateBegin(ActiveInst);
       }
       // END TEMPLIGHT
     }

@@ -37,7 +37,7 @@ class SourceManager;
 /// source file (MemoryBuffer) along with its \#include path and \#line data.
 ///
 class FileID {
-  /// \brief A mostly-opaque identifier, where 0 is "invalid", >0 is 
+  /// \brief A mostly-opaque identifier, where 0 is "invalid", >0 is
   /// this module, and <-1 is something loaded from another module.
   int ID;
 public:
@@ -60,7 +60,7 @@ private:
   friend class SourceManager;
   friend class ASTWriter;
   friend class ASTReader;
-  
+
   static FileID get(int V) {
     FileID F;
     F.ID = V;
@@ -215,7 +215,7 @@ public:
     return B != X.B || E != X.E;
   }
 };
-  
+
 /// \brief Represents a character-granular source range.
 ///
 /// The underlying SourceRange can either specify the starting/ending character
@@ -223,7 +223,7 @@ public:
 /// last token of the range (a "token range").  In the token range case, the
 /// size of the last token must be measured to determine the actual end of the
 /// range.
-class CharSourceRange { 
+class CharSourceRange {
   SourceRange Range;
   bool IsTokenRange;
 public:
@@ -237,27 +237,27 @@ public:
   static CharSourceRange getCharRange(SourceRange R) {
     return CharSourceRange(R, false);
   }
-    
+
   static CharSourceRange getTokenRange(SourceLocation B, SourceLocation E) {
     return getTokenRange(SourceRange(B, E));
   }
   static CharSourceRange getCharRange(SourceLocation B, SourceLocation E) {
     return getCharRange(SourceRange(B, E));
   }
-  
+
   /// \brief Return true if the end of this range specifies the start of
   /// the last token.  Return false if the end of this range specifies the last
   /// character in the range.
   bool isTokenRange() const { return IsTokenRange; }
   bool isCharRange() const { return !IsTokenRange; }
-  
+
   SourceLocation getBegin() const { return Range.getBegin(); }
   SourceLocation getEnd() const { return Range.getEnd(); }
   SourceRange getAsRange() const { return Range; }
- 
+
   void setBegin(SourceLocation b) { Range.setBegin(b); }
   void setEnd(SourceLocation e) { Range.setEnd(e); }
-  
+
   bool isValid() const { return Range.isValid(); }
   bool isInvalid() const { return !isValid(); }
 };
@@ -414,7 +414,7 @@ namespace llvm {
       return LHS == RHS;
     }
   };
-  
+
   template <>
   struct isPodLike<clang::SourceLocation> { static const bool value = true; };
   template <>
