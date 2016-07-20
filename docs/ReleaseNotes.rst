@@ -48,6 +48,9 @@ Major New Features
 ------------------
 
 -  ...
+- On Itanium ABI targets, attribute abi_tag is now supported for compatibility
+  with GCC. Clang implementation of abi_tag is mostly compatible with GCC ABI
+  version 10.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
