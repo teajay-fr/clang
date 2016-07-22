@@ -55,6 +55,7 @@ Major New Features
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+about them. The improvements since the 3.8 release include:
 -  ...
 
 New Compiler Flags
