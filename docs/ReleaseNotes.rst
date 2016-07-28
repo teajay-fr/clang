@@ -80,6 +80,9 @@ Windows Support
 
 Clang's support for building native Windows programs ...
 
+Proper support, including correct mangling and overloading, added for
+MS-specific "__unaligned" type qualifier.
+
 
 C Language Changes in Clang
 ---------------------------
