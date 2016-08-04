@@ -47,7 +47,7 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
--  ...
+- Clang will no longer pass --build-id by default to the linker. In modern
 - On Itanium ABI targets, attribute abi_tag is now supported for compatibility
   with GCC. Clang implementation of abi_tag is mostly compatible with GCC ABI
   version 10.
