@@ -8526,6 +8526,7 @@ bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
       if (UO->getOpcode() == UO_Minus || UO->getOpcode() == UO_Not)
         OriginalWidth = Value.getMinSignedBits();
 
+
   if (OriginalWidth <= FieldWidth)
     return false;
 
