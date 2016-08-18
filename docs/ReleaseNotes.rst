@@ -39,7 +39,7 @@ Major New Features
 
 - Clang will no longer pass --build-id by default to the linker. In modern
 - On Itanium ABI targets, attribute abi_tag is now supported for compatibility
-  with GCC. Clang implementation of abi_tag is mostly compatible with GCC ABI
+  with GCC. Clang's implementation of abi_tag is mostly compatible with GCC ABI
   version 10.
 
 Improvements to Clang's diagnostics
@@ -49,22 +49,10 @@ about them. The improvements since the 3.8 release include:
 - -Wcomma is a new warning to show most uses of the builtin comma operator.
 - -Wfloat-conversion has two new sub-warnings to give finer grain control for
   floating point to integer conversion warnings.
-  - -Wfloat-overflow-convserion detects when a constant floating point value
+  - -Wfloat-overflow-conversion detects when a constant floating point value
     is converted to an integer type and will overflow the target type.
   - -Wfloat-zero-conversion detects when a non-zero floating point value is
     converted to a zero integer value.
-
-New Compiler Flags
-------------------
-
-The option ....
-
-
-New Pragmas in Clang
------------------------
-
-Clang now supports the ...
-
 
 Attribute Changes in Clang
 --------------------------
@@ -74,7 +62,7 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
-Clang's support for building native Windows programs ...
+TLS is enabled for Cygwin and defaults to -femulated-tls.
 
 Proper support, including correct mangling and overloading, added for
 MS-specific "__unaligned" type qualifier.
@@ -82,39 +70,25 @@ MS-specific "__unaligned" type qualifier.
 clang-cl now has limited support for the precompiled header flags /Yc, /Yu, and
 /Fp.  If the precompiled header is passed on the compile command with /FI, then
 the precompiled header flags are honored.  But if the precompiled header is
-included by an `#include <stdafx.h>` in each source file instead of by a
-`/FIstdafx.h` flag, these flag continue to be ignored.
+included by an ``#include <stdafx.h>`` in each source file instead of by a
+``/FIstdafx.h`` flag, these flag continue to be ignored.
 
-clang-cl has a new flag, `/imsvc <dir>`, for adding a directory to the system
-include search path (where warnings are disabled default) without having to
-set `%INCLUDE`.
+clang-cl has a new flag, ``/imsvc <dir>``, for adding a directory to the system
+include search path (where warnings are disabled by default) without having to
+set ``%INCLUDE``.
 
 C Language Changes in Clang
 ---------------------------
 
 - ...
 
-...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
 
 C++ Language Changes in Clang
 -----------------------------
 
-...
 
 C++1z Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-
-...
-
-Objective-C Language Changes in Clang
--------------------------------------
-
-...
 
 OpenCL C Language Changes in Clang
 ----------------------------------
@@ -171,28 +145,12 @@ OpenMP Support in Clang
 
 ...
 
-Internal API Changes
---------------------
-
-These are major API changes that have happened since the 3.8 release of
-Clang. If upgrading an external codebase that uses Clang as a library,
-this section should help get you past the largest hurdles of upgrading.
-
--  ...
-
 AST Matchers
 ------------
 
-...
-
-libclang
---------
-
-...
 
 With the option --show-description, scan-build's list of defects will also
 show the description of the defects.
-
 
 Static Analyzer
 ---------------
@@ -214,25 +172,6 @@ The scan-build tool now supports a ``--force-analyze-debug-code`` flag that
 forces projects to analyze in debug mode. This flag leaves in assertions and so
 typically results in fewer false positives.
 
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
-
-Python Binding Changes
-----------------------
-
-The following methods have been added:
-
--  ...
-
-Significant Known Problems
-==========================
 
 Additional Information
 ======================
