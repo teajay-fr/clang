@@ -37,7 +37,7 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
-- Clang will no longer pass --build-id by default to the linker. In modern
+- Clang will no longer pass ``--build-id`` by default to the linker. In modern
 - On Itanium ABI targets, attribute abi_tag is now supported for compatibility
   with GCC. Clang's implementation of abi_tag is mostly compatible with GCC ABI
   version 10.
@@ -46,12 +46,15 @@ Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 about them. The improvements since the 3.8 release include:
-- -Wcomma is a new warning to show most uses of the builtin comma operator.
-- -Wfloat-conversion has two new sub-warnings to give finer grain control for
+- ``-Wcomma`` is a new warning to show most uses of the builtin comma operator.
+
+- ``-Wfloat-conversion`` has two new sub-warnings to give finer grain control for
   floating point to integer conversion warnings.
-  - -Wfloat-overflow-conversion detects when a constant floating point value
+
+  - ``-Wfloat-overflow-conversion`` detects when a constant floating point value
     is converted to an integer type and will overflow the target type.
-  - -Wfloat-zero-conversion detects when a non-zero floating point value is
+
+  - ``-Wfloat-zero-conversion`` detects when a non-zero floating point value is
     converted to a zero integer value.
 
 Attribute Changes in Clang
