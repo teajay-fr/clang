@@ -52,7 +52,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/ADT/OwningPtr.h"
 #include "llvm/Support/TimeValue.h"
 #include <deque>
 #include <memory>
@@ -3295,12 +3294,12 @@ public:
                                      SmallVectorImpl<ObjCMethodDecl*>& Methods,
                                      bool InstanceFirst, bool CheckTheOther,
                                      const ObjCObjectType *TypeBound = nullptr);
-    
+
   bool
   AreMultipleMethodsInGlobalPool(Selector Sel, ObjCMethodDecl *BestMethod,
                                  SourceRange R, bool receiverIdOrClass,
                                  SmallVectorImpl<ObjCMethodDecl*>& Methods);
-      
+
   void
   DiagnoseMultipleMethodInGlobalPool(SmallVectorImpl<ObjCMethodDecl*> &Methods,
                                      Selector Sel, SourceRange R,
@@ -3312,7 +3311,7 @@ private:
   ObjCMethodDecl *SelectBestMethod(Selector Sel, MultiExprArg Args,
                                    bool IsInstance,
                                    SmallVectorImpl<ObjCMethodDecl*>& Methods);
-    
+
 
   /// \brief Record the typo correction failure and return an empty correction.
   TypoCorrection FailedCorrection(IdentifierInfo *Typo, SourceLocation TypoLoc,
@@ -5626,7 +5625,7 @@ public:
 
   /// CheckOverrideControl - Check C++11 override control semantics.
   void CheckOverrideControl(NamedDecl *D);
-    
+
   /// DiagnoseAbsenceOfOverrideControl - Diagnose if 'override' keyword was
   /// not used in the declaration of an overriding method.
   void DiagnoseAbsenceOfOverrideControl(NamedDecl *D);
@@ -7249,7 +7248,7 @@ public:
 
   public:
     /// Set the ExtParameterInfo for the parameter at the given index,
-    /// 
+    ///
     void set(unsigned index, FunctionProtoType::ExtParameterInfo info) {
       assert(Infos.size() <= index);
       Infos.resize(index);
@@ -7488,7 +7487,7 @@ public:
                                  const SourceLocation *ProtoLocs,
                                  SourceLocation EndProtoLoc,
                                  AttributeList *AttrList);
-    
+
   void ActOnSuperClassOfClassInterface(Scope *S,
                                        SourceLocation AtInterfaceLoc,
                                        ObjCInterfaceDecl *IDecl,
@@ -7498,7 +7497,7 @@ public:
                                        SourceLocation SuperLoc,
                                        ArrayRef<ParsedType> SuperTypeArgs,
                                        SourceRange SuperTypeArgsRange);
-  
+
   void ActOnTypedefedProtocols(SmallVectorImpl<Decl *> &ProtocolRefs,
                                IdentifierInfo *SuperName,
                                SourceLocation SuperLoc);
@@ -7828,7 +7827,7 @@ public:
   void CheckTollFreeBridgeCast(QualType castType, Expr *castExpr);
 
   void CheckObjCBridgeRelatedCast(QualType castType, Expr *castExpr);
-  
+
   bool CheckTollFreeBridgeStaticCast(QualType castType, Expr *castExpr,
                                      CastKind &Kind);
 
@@ -9710,8 +9709,8 @@ private:
                             SourceLocation Loc);
 
   void checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
-                 ArrayRef<const Expr *> Args, bool IsMemberFunction, 
-                 SourceLocation Loc, SourceRange Range, 
+                 ArrayRef<const Expr *> Args, bool IsMemberFunction,
+                 SourceLocation Loc, SourceRange Range,
                  VariadicCallType CallType);
 
   bool CheckObjCString(Expr *Arg);
@@ -9782,7 +9781,7 @@ public:
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
 
   bool FormatStringHasSArg(const StringLiteral *FExpr);
-  
+
   static bool GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx);
 
 private:
@@ -10017,7 +10016,7 @@ public:
     std::string getFormatName() { return "yaml"; }
 
   private:
-    llvm::OwningPtr<llvm::yaml::Output> Output;
+     std::unique_ptr<llvm::yaml::Output> Output;
   };
 
   class XmlPrinter : public TracePrinter {
@@ -10053,7 +10052,7 @@ private:
 
   raw_ostream* TraceOS;
   raw_ostream* FileListOS;
-  llvm::OwningPtr<TracePrinter> TemplateTracePrinter;
+  std::unique_ptr<TracePrinter> TemplateTracePrinter;
   std::set<size_t> TemplateUsedFileSet;
 
   void traceTemplateFileUsages(const SourceLocation &sLoc);
@@ -10122,7 +10121,7 @@ public:
 private:
   void flushRawTraceEntry(const RawTraceEntry& Entry);
   // END TEMPLIGHT
-  
+
   private:
   /// \brief Helper class that collects misaligned member designations and
   /// their location info for delayed diagnostics.

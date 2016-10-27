@@ -29,7 +29,7 @@
 // BEGIN TEMPLIGHT
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FileSystem.h"
-#include <llvm/Object/YAML.h>
+#include <llvm/ObjectYAML/YAML.h>
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/Process.h"
 #include <string>
@@ -123,7 +123,7 @@ void Sema::YamlPrinter::printEntry(raw_ostream*,
   const PrintableTraceEntry& Entry) {
   void *SaveInfo;
   if ( Output->preflightFlowElement(1, SaveInfo) ) {
-    llvm::yaml::yamlize(*Output, const_cast<PrintableTraceEntry&>(Entry), true);
+    //llvm::yaml::yamlize(*Output, const_cast<PrintableTraceEntry&>(Entry), true);
     Output->postflightFlowElement(SaveInfo);
   }
 }
@@ -352,27 +352,27 @@ void Sema::startTemplight() {
     std::string postfix = getTemplightMemoryFlag() ? ".memory.trace." : ".trace.";
     postfix += TemplateTracePrinter->getFormatName();
 
-    std::string FileName =
+    auto FileName =
       getSourceManager().getFileEntryForID(fileID)->getName() + postfix;
 
-    std::string error;
-    TraceOS = new llvm::raw_fd_ostream(FileName.c_str(), error,llvm::sys::fs::F_None );
+    std::error_code error;
+    TraceOS = new llvm::raw_fd_ostream(FileName.str().c_str(), error,llvm::sys::fs::F_None );
 
-    if (!error.empty()) {
+    if (error) {
       llvm::errs() <<
         "Can not open file to write trace of template instantiations: "
-        << FileName << " Error: " << error;
+        << FileName << " Error: " << error.message();
       setTemplightFlag(false);
       return;
     }
-    std::string FileListFileName =
+    auto FileListFileName =
       getSourceManager().getFileEntryForID(fileID)->getName() + std::string(".filelist.trace");
-    FileListOS = new llvm::raw_fd_ostream(FileListFileName.c_str(), error,llvm::sys::fs::F_None );
+    FileListOS = new llvm::raw_fd_ostream(FileListFileName.str().c_str(), error,llvm::sys::fs::F_None );
 
-    if (!error.empty()) {
+    if (error) {
       llvm::errs() <<
         "Can not open file to write trace of template instantiations: "
-        << FileListFileName << " Error: " << error;
+        << FileListFileName << " Error: " << error.message();
       setTemplightFlag(false);
       return;
     }
@@ -429,13 +429,13 @@ void Sema::templightTraceToStdOut() {
 }
 
 void Sema::setTemplightOutputFile(const std::string& FileName) {
-  std::string error;
-  TraceOS = new llvm::raw_fd_ostream(FileName.c_str(), error,llvm::sys::fs::F_None);
+  std::error_code error;
+  TraceOS = new llvm::raw_fd_ostream(FileName, error,llvm::sys::fs::F_None);
 
-  if (!error.empty()) {
+  if (error) {
     llvm::errs() <<
       "Can not open file to write trace of template instantiations: "
-      << FileName << " Error: " << error;
+      << FileName << " Error: " << error.message();
     TraceOS = 0;
     return;
   }
@@ -1285,7 +1285,7 @@ namespace {
           NewMD->setInstantiationOfMemberFunction(OldMD,
                                                   TSK_ImplicitInstantiation);
       }
-      
+
       SemaRef.CurrentInstantiationScope->InstantiatedLocal(Old, New);
 
       // We recreated a local declaration, but not by instantiating it. There
